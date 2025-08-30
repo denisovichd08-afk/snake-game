@@ -57,12 +57,20 @@ def main():
     snake_segments = [pygame.math.Vector2(SCREEN_WIDTH / 2 - i * SEGMENT_DISTANCE, SCREEN_HEIGHT / 2) for i in range(5)]
     
     # Генерируем еду
-    food = get_new_food()
+    fruits = [get_new_food()]
+    last_fruit_spawn_time = pygame.time.get_ticks()
     
     score = 0
     game_over = False
 
     while not game_over:
+        current_time = pygame.time.get_ticks()
+
+        # --- Генерация фруктов по таймеру ---
+        if current_time - last_fruit_spawn_time > 100:
+            fruits.append(get_new_food())
+            last_fruit_spawn_time = current_time
+
         # --- Обработка событий ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -107,11 +115,11 @@ def main():
             game_over = True
 
         # С едой
-        if head.distance_to(food['pos']) < SNAKE_SIZE * 2:
-            score += 1
-            # Добавляем новый сегмент на место хвоста
-            snake_segments.append(snake_segments[-1].copy())
-            food = get_new_food()
+        for fruit in fruits[:]: # Итерируемся по копии, чтобы безопасно удалять
+            if head.distance_to(fruit['pos']) < SNAKE_SIZE * 2:
+                score += 1
+                snake_segments.append(snake_segments[-1].copy())
+                fruits.remove(fruit)
 
         # С собой (проверяем столкновение головы с сегментами дальше 3-го)
         # for segment in snake_segments[3:]:
@@ -123,12 +131,13 @@ def main():
         screen.fill(BLACK)
 
         # Еда (фрукты)
-        fruit_surface = fruit_font.render(food['emoji'], True, WHITE)
-        # Масштабируем фрукт до нужного размера (чуть больше головы змейки)
-        fruit_size = int(SNAKE_SIZE * 2.5)
-        fruit_surface = pygame.transform.smoothscale(fruit_surface, (fruit_size, fruit_size))
-        fruit_rect = fruit_surface.get_rect(center=(int(food['pos'].x), int(food['pos'].y)))
-        screen.blit(fruit_surface, fruit_rect)
+        for fruit in fruits:
+            fruit_surface = fruit_font.render(fruit['emoji'], True, WHITE)
+            # Масштабируем фрукт до нужного размера (чуть больше головы змейки)
+            fruit_size = int(SNAKE_SIZE * 2.5)
+            fruit_surface = pygame.transform.smoothscale(fruit_surface, (fruit_size, fruit_size))
+            fruit_rect = fruit_surface.get_rect(center=(int(fruit['pos'].x), int(fruit['pos'].y)))
+            screen.blit(fruit_surface, fruit_rect)
 
         # Змейка (рисуем с хвоста, чтобы голова была сверху)
         for i in range(len(snake_segments) - 1, -1, -1):
