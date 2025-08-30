@@ -3,6 +3,8 @@ import pygame
 import sys
 import random
 import math
+import os
+import datetime
 
 # --- Инициализация Pygame ---
 pygame.init()
@@ -30,18 +32,32 @@ SNAKE_SIZE = 10  # Радиус сегмента
 # Расстояние между центрами сегментов. Чуть меньше диаметра для плавного перекрытия.
 SEGMENT_DISTANCE = SNAKE_SIZE * 1.5 
 
-# --- Шрифты ---
+# --- Шрифты и еда ---
 font = pygame.font.Font(None, 48)
+# Ищем системный шрифт с поддержкой эмодзи. Размер здесь может не влиять на битмапные эмодзи.
+fruit_font = pygame.font.SysFont("noto color emoji, segoe ui emoji, apple color emoji", 72)
+FRUITS = ["🍎", "🍌", "🍇", "🍓", "🍊", "🥝", "🍒"]
+
+def get_new_food():
+    """Генерирует новый фрукт в случайном месте."""
+    return {
+        'emoji': random.choice(FRUITS),
+        'pos': pygame.math.Vector2(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+    }
 
 def main():
     """Основной игровой цикл"""
     # --- Начальные условия ---
+
+    # Создаем папку для скриншотов
+    if not os.path.exists('screenshots'):
+        os.makedirs('screenshots')
     
     # Создаем начальную змейку, вытянутую горизонтально
     snake_segments = [pygame.math.Vector2(SCREEN_WIDTH / 2 - i * SEGMENT_DISTANCE, SCREEN_HEIGHT / 2) for i in range(5)]
     
     # Генерируем еду
-    food_pos = pygame.math.Vector2(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+    food = get_new_food()
     
     score = 0
     game_over = False
@@ -52,6 +68,11 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a and (event.mod & pygame.KMOD_CTRL):
+                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                    filename = os.path.join('screenshots', f'screenshot_{timestamp}.png')
+                    pygame.image.save(screen, filename)
 
         # --- Управление ---
         mouse_pos = pygame.math.Vector2(pygame.mouse.get_pos())
@@ -86,11 +107,11 @@ def main():
             game_over = True
 
         # С едой
-        if head.distance_to(food_pos) < SNAKE_SIZE * 2:
+        if head.distance_to(food['pos']) < SNAKE_SIZE * 2:
             score += 1
             # Добавляем новый сегмент на место хвоста
             snake_segments.append(snake_segments[-1].copy())
-            food_pos = pygame.math.Vector2(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+            food = get_new_food()
 
         # С собой (проверяем столкновение головы с сегментами дальше 3-го)
         for segment in snake_segments[3:]:
@@ -101,8 +122,13 @@ def main():
         # --- Отрисовка ---
         screen.fill(BLACK)
 
-        # Еда
-        pygame.draw.circle(screen, RED, (int(food_pos.x), int(food_pos.y)), SNAKE_SIZE + 2)
+        # Еда (фрукты)
+        fruit_surface = fruit_font.render(food['emoji'], True, WHITE)
+        # Масштабируем фрукт до нужного размера (чуть больше головы змейки)
+        fruit_size = int(SNAKE_SIZE * 2.5)
+        fruit_surface = pygame.transform.smoothscale(fruit_surface, (fruit_size, fruit_size))
+        fruit_rect = fruit_surface.get_rect(center=(int(food['pos'].x), int(food['pos'].y)))
+        screen.blit(fruit_surface, fruit_rect)
 
         # Змейка (рисуем с хвоста, чтобы голова была сверху)
         for i in range(len(snake_segments) - 1, -1, -1):
