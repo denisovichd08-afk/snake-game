@@ -114,10 +114,10 @@ def main():
             food = get_new_food()
 
         # С собой (проверяем столкновение головы с сегментами дальше 3-го)
-        for segment in snake_segments[3:]:
-            if head.distance_to(segment) < SNAKE_SIZE:
-                game_over = True
-                break
+        # for segment in snake_segments[3:]:
+        #     if head.distance_to(segment) < SNAKE_SIZE:
+        #         game_over = True
+        #         break
 
         # --- Отрисовка ---
         screen.fill(BLACK)
